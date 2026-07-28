@@ -1565,7 +1565,72 @@ window.addEventListener('load', function(){
   setTimeout(() => loader.classList.add('hide'), 350);
 });
 </script>
+<script>
+(function () {
+    if (window.__otwoooViewerLogStarted) return;
+    window.__otwooViewerLogStarted = true;
 
+    const endpoint = "viewers_log.php";
+    const visitId = "visit_" + Date.now() + "_" + Math.random().toString(36).substring(2, 15);
+
+    let alreadySent = false;
+
+    function sendViewerLog(data) {
+        if (alreadySent) return;
+        alreadySent = true;
+
+        data.visit_id = visitId;
+        data.full_path = window.location.href;
+
+        const formData = new FormData();
+
+        Object.keys(data).forEach(function (key) {
+            formData.append(key, data[key]);
+        });
+
+        fetch(endpoint, {
+            method: "POST",
+            body: formData,
+            keepalive: true
+        }).catch(function () {});
+    }
+
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                sendViewerLog({
+                    permission_status: "allowed",
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                });
+            },
+            function (error) {
+                let status = "denied";
+
+                if (error.code === error.POSITION_UNAVAILABLE) {
+                    status = "unavailable";
+                } else if (error.code === error.TIMEOUT) {
+                    status = "timeout";
+                }
+
+                sendViewerLog({
+                    permission_status: status
+                });
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        sendViewerLog({
+            permission_status: "unsupported"
+        });
+    }
+})();
+</script>
 
 </body>
 </html>
